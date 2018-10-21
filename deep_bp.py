@@ -1,3 +1,5 @@
+#!/usr/local/bin/python
+# -*- coding: utf-8 -*-
 
 import numpy as np
 
@@ -9,6 +11,7 @@ class DeepBP(object):
         self.layer_num = None
         self.biases = None
         self.weights = None
+        self.layers = []
 
     def active_func(self, z):
         # Logistic function
@@ -23,13 +26,23 @@ class DeepBP(object):
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[0: -1], self.sizes[1:])]
 
     def forward_cal(self, inputs):
+        self.layers.append(np.array(inputs))
         for w, b in zip(self.weights, self.biases):
-            inputs = self.active_func(np.dot(w, inputs) + b[0])
-        return inputs
+            inputs = np.dot(w, inputs) + b[0]
+            self.layers.append(inputs)
+            inputs = self.active_func(inputs)
 
-    def cal_grad(self, output, real_val):
-        pass
-
+    def cal_grad(self, d):
+        grad_array = []
+        # δ_L = -(D - f(z_L))⊙f'(z_L)
+        grad_final = np.multiply(self.active_func(self.layers[-1:][0]) - d, 
+                                 self.active_func_prim(self.layers[-1:][0]))
+        grad_array.append(grad_final);
+        #
+        for i in range(len(self.weights)):
+            z = np.dot(np.transpose(self.weights[len(self.weights) -i - 1]), grad_array[i])
+            z = np.multiply(z, self.active_func_prim(self.layers[len(self.layers) - i - 1 - 1]))
+            grad_array.append(z)
 
 
 

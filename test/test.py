@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath("/Users/qt80537/Desktop/testCodes/deep_bp/"))
+sys.path.append(os.path.abspath("./"))
 import unittest
 import deep_bp as dbp
 import numpy as np
@@ -20,4 +20,14 @@ class DeepBPTest(unittest.TestCase):
         res = np.dot(self.m, self.v) + self.b
         self.assertEqual(1, 1)
 
+    def test_numpy_hadamard(self):
+        m1 = [[1, 2], [2, 3]]
+        m2 = [[3, 4], [4, 5]]
+        m12 = np.multiply(m1, m2)
+        self.assertEqual(1, 1)        
+
+    def test_array(self):
+        m1 = [1, 2, 3, 4, 5]
+        print(m1[-1:])
+        self.assertEqual(1, 1)        
 
