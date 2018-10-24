@@ -1,6 +1,6 @@
-#!/usr/local/bin/python
 # -*- coding: utf-8 -*-
 
+import random
 import numpy as np
 
 
@@ -12,7 +12,6 @@ class DeepBP(object):
         self.biases = None
         self.weights = None
         self.layers = []
-        self.learning_coef = 0.5
 
     def __sigmoid_func(self, z):
         # Logistic function
@@ -28,10 +27,10 @@ class DeepBP(object):
         return 2 * np.array(z)
 
     def active_func(self, z):
-        return self.__square_func(z)
+        return self.__sigmoid_func(z)
 
     def active_func_prim(self, z):
-        return self.__square_func_prim(z)
+        return self.__sigmoid_func_prim(z)
 
     def init_parameters(self):
         self.biases = [np.random.randn(1, y) for y in self.sizes[1:]]
@@ -70,7 +69,7 @@ class DeepBP(object):
             derivative_weight_array.append(itemT * a_val)
         return derivative_weight_array, derivative_biases_array
 
-    def batch_process(self, inputs, ds):
+    def batch_process(self, inputs, ds, eta):
         aveg_weights_derivative = None
         aveg_biases_derivative = None
         self.layers = []
@@ -88,12 +87,20 @@ class DeepBP(object):
                 aveg_biases_derivative = np.array(biases_derivative)
             else:
                 aveg_biases_derivative += np.array(biases_derivative)
-        aveg_weights_derivative *= (self.learning_coef / n)
-        aveg_biases_derivative *= (self.learning_coef / n)
+        aveg_weights_derivative *= (eta / n)
+        aveg_biases_derivative *= (eta / n)
         aveg_weights_derivative = self.__convert_matrixs_to_arrays(aveg_weights_derivative)
         for i in range(self.layer_num - 1):
             self.weights[i] -= aveg_weights_derivative[i]
             self.biases[i] -= aveg_biases_derivative[i]
+
+    def sgd(self, tuple_data, epochs, mini_batch, eta, test_data=None):
+        for i in range(epochs):
+            random.shuffle(tuple_data)
+            mini_batches = [tuple_data[k : k + mini_batch] 
+                            for k in range(0, len(tuple_data), mini_batch)]
+            for mini_batche in mini_batches:
+                self.batch_process(mini_batche[0], mini_batche[1], eta)
 
     def __convert_matrixs_to_arrays(self, matrixs):
         arrays = []

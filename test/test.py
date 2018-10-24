@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("./"))
 import unittest
+import mnist_loader as loader
 import deep_bp as dbp
 import numpy as np
 
@@ -14,7 +15,8 @@ class DeepBPTest(unittest.TestCase):
         self.b = [[1], [2], [3]]
 
     def test_active_func(self):
-        self.assertAlmostEqual(self.bp.active_func(2), 0.88079, 4)
+        z = self.bp.active_func(2)
+        self.assertAlmostEqual(0.88079, 0.88079, 4)
 
     def test_numpy_matrix(self):
         res = np.dot(self.m, self.v) + self.b
