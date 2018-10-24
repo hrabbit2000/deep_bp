@@ -24,10 +24,34 @@ class DeepBPTest(unittest.TestCase):
         m1 = [[1, 2], [2, 3]]
         m2 = [[3, 4], [4, 5]]
         m12 = np.multiply(m1, m2)
+        m3 = np.matrix([[1, 2], [2, 3]])
+        m4 = m3.getA()
         self.assertEqual(1, 1)        
 
     def test_array(self):
-        m1 = [1, 2, 3, 4, 5]
-        print(m1[-1:])
-        self.assertEqual(1, 1)        
+        m1 = [1, 2, 3]
+        m2 = [i for i in range(3 - 1, -1, -1)]
+        m2[1] = [8, 4]
+        m3 = np.array([1, 2])
+        m3 = np.transpose(np.matrix(m3))
+        m4 = np.array([1, 2, 3])
+        m5 = m3 * m4
+        m6 = np.array(m1) * 2
+        print(m6)
+        # print(m5)
+        # m4 = np.multiply(np.transpose(m1), m3)
+        # print(m1[-1:])
+        # print(m2)
+        self.assertEqual(1, 1)
+
+    def test_square(self):
+        z = np.square([2, 3])
+        # print(z)
+        self.assertEqual(1, 1)
+
+
+
+
+
+
 
