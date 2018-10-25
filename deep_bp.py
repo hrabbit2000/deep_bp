@@ -6,12 +6,13 @@ import numpy as np
 
 class DeepBP(object):
     # init func
-    def __init__(self, sizes):
+    def __init__(self, sizes, using_sigmoid = True):
         self.sizes = sizes
         self.layer_num = len(self.sizes)
         self.biases = None
         self.weights = None
         self.layers = []
+        self.using_sigmoid = using_sigmoid
 
     def __sigmoid_func(self, z):
         # Logistic function
@@ -27,10 +28,16 @@ class DeepBP(object):
         return 2 * np.array(z)
 
     def active_func(self, z):
-        return self.__sigmoid_func(z)
+        if (self.using_sigmoid):
+            return self.__sigmoid_func(z)
+        else:
+            return self.__square_func(z)
 
     def active_func_prim(self, z):
-        return self.__sigmoid_func_prim(z)
+        if (self.using_sigmoid):
+            return self.__sigmoid_func_prim(z)
+        else:
+            return self.__square_func_prim(z)
 
     def init_parameters(self):
         self.biases = [np.random.randn(1, y) for y in self.sizes[1:]]
@@ -94,13 +101,14 @@ class DeepBP(object):
             self.weights[i] -= aveg_weights_derivative[i]
             self.biases[i] -= aveg_biases_derivative[i]
 
-    def sgd(self, tuple_data, epochs, mini_batch, eta, test_data=None):
+    def sgd(self, zip_data, epochs, mini_batch, eta, test_data=None):
         for i in range(epochs):
-            random.shuffle(tuple_data)
-            mini_batches = [tuple_data[k : k + mini_batch] 
-                            for k in range(0, len(tuple_data), mini_batch)]
+            random.shuffle(zip_data)
+            mini_batches = [zip_data[k : k + mini_batch] 
+                            for k in range(0, len(zip_data), mini_batch)]
             for mini_batche in mini_batches:
-                self.batch_process(mini_batche[0], mini_batche[1], eta)
+                for x, y in mini_batche:
+                    self.batch_process(x, y, eta)
 
     def __convert_matrixs_to_arrays(self, matrixs):
         arrays = []
