@@ -39,7 +39,7 @@ class DeepBPTest(unittest.TestCase):
         m4 = np.array([1, 2, 3])
         m5 = m3 * m4
         m6 = np.array(m1) * 2
-        print(m6)
+        # print(m6)
         # print(m5)
         # m4 = np.multiply(np.transpose(m1), m3)
         # print(m1[-1:])
@@ -51,6 +51,13 @@ class DeepBPTest(unittest.TestCase):
         # print(z)
         self.assertEqual(1, 1)
 
+    def test_reshape(self):
+        z = np.array(self.m)
+        print()
+        print(z.shape, z)
+        z = np.transpose(z)
+        print(z.shape, z)
+        self.assertEqual(1, 1)
 
 
 

@@ -13,6 +13,7 @@ class DeepBP(object):
         self.weights = None
         self.layers = []
         self.using_sigmoid = using_sigmoid
+        self.__init_parameters()
 
     def __sigmoid_func(self, z):
         # Logistic function
@@ -21,34 +22,35 @@ class DeepBP(object):
     def __sigmoid_func_prim(self, z):
         return self.__sigmoid_func(z)*(1.0 - self.__sigmoid_func(z))
 
-    def __square_func(self, z):
-        return np.square(z)
+    def __linear_func(self, z):
+        return z
 
-    def __square_func_prim(self, z):
-        return 2 * np.array(z)
+    def __linear_func_prim(self, z):
+        return np.ones(z.shape)
 
     def active_func(self, z):
         if (self.using_sigmoid):
             return self.__sigmoid_func(z)
         else:
-            return self.__square_func(z)
+            return self.__linear_func(z)
 
     def active_func_prim(self, z):
         if (self.using_sigmoid):
             return self.__sigmoid_func_prim(z)
         else:
-            return self.__square_func_prim(z)
+            return self.__linear_func_prim(z)
 
-    def init_parameters(self):
-        self.biases = [np.random.randn(1, y) for y in self.sizes[1:]]
-        self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[0: -1], self.sizes[1:])]
+    def __init_parameters(self):
+        self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
+        self.weights = [np.random.randn(x, y) for x, y in zip(self.sizes[0: -1], self.sizes[1:])]
 
     def forward_cal(self, input):
-        self.layers.append(np.array(input))
+        z = input
+        self.layers.append(np.array(z))
         for w, b in zip(self.weights, self.biases):
-            input = np.dot(w, input) + b[0]
-            self.layers.append(input)
-            input = self.active_func(input)
+            z = np.dot(np.transpose(w), z) + b
+            self.layers.append(z)
+            z = self.active_func(z)
         #
         return input
 
@@ -62,28 +64,28 @@ class DeepBP(object):
         grad_array[self.layer_num - 1] = grad_final
         # begin from (L - 1) layer
         for n in range(self.layer_num - 2, 0, -1):
-            grad_n = np.dot(np.transpose(self.weights[(n - 1) + 1]), grad_array[n + 1])
+            grad_n = np.dot(self.weights[(n - 1) + 1], grad_array[n + 1])
             grad_n = np.multiply(grad_n, self.active_func_prim(self.layers[n]))
             grad_array[n] = grad_n
         # biases derivative
         derivative_biases_array = grad_array[1:]
         # weights derivative
         for n in range(1, self.layer_num):
-            itemT = np.transpose(np.matrix(grad_array[n]))
+            itemT = grad_array[n]
             a_val = self.active_func(self.layers[n - 1])
             if (1 == n):
                 a_val = self.layers[0]
-            derivative_weight_array.append(itemT * a_val)
+            derivative_weight_array.append(a_val * np.transpose(itemT))
         return derivative_weight_array, derivative_biases_array
 
-    def batch_process(self, inputs, ds, eta):
+    def batch_process(self, batch, eta):
         aveg_weights_derivative = None
         aveg_biases_derivative = None
         self.layers = []
-        n = len(inputs)
-        for i in range(n):
-            self.forward_cal(inputs[i])
-            weights_derivative, biases_derivative = self.cal_derivative(ds[i])
+        n = len(batch)
+        for x, y in batch:
+            self.forward_cal(x)
+            weights_derivative, biases_derivative = self.cal_derivative(y)
             # accumnulate biases
             if None == aveg_weights_derivative:
                 aveg_weights_derivative = np.array(weights_derivative)
@@ -96,25 +98,17 @@ class DeepBP(object):
                 aveg_biases_derivative += np.array(biases_derivative)
         aveg_weights_derivative *= (eta / n)
         aveg_biases_derivative *= (eta / n)
-        aveg_weights_derivative = self.__convert_matrixs_to_arrays(aveg_weights_derivative)
         for i in range(self.layer_num - 1):
             self.weights[i] -= aveg_weights_derivative[i]
             self.biases[i] -= aveg_biases_derivative[i]
 
     def sgd(self, zip_data, epochs, mini_batch, eta, test_data=None):
-        for i in range(epochs):
+        for _ in range(epochs):
             random.shuffle(zip_data)
             mini_batches = [zip_data[k : k + mini_batch] 
-                            for k in range(0, len(zip_data), mini_batch)]
+                            for k in range(0, len(zip_data) - mini_batch + 1, mini_batch)]
             for mini_batche in mini_batches:
-                for x, y in mini_batche:
-                    self.batch_process(x, y, eta)
-
-    def __convert_matrixs_to_arrays(self, matrixs):
-        arrays = []
-        for m in matrixs:
-            arrays.append(m.getA())
-        return arrays
+                self.batch_process(mini_batche, eta)
 
 
 
