@@ -103,13 +103,27 @@ class DeepBP(object):
             self.biases[i] -= aveg_biases_derivative[i]
 
     def sgd(self, zip_data, epochs, mini_batch, eta, test_data=None):
-        for _ in range(epochs):
+        for j in range(epochs):
             random.shuffle(zip_data)
             mini_batches = [zip_data[k : k + mini_batch] 
                             for k in range(0, len(zip_data) - mini_batch + 1, mini_batch)]
             for mini_batche in mini_batches:
                 self.batch_process(mini_batche, eta)
+            #
+            if test_data:
+                print "Epoch {0}: {1} / {2}".format(
+                    j, self.evaluate(test_data), len(test_data))
+            else:
+                print "Epoch {0} complete".format(j)
 
+    def evaluate(self, test_data):
+        """Return the number of test inputs for which the neural
+        network outputs the correct result. Note that the neural
+        network's output is assumed to be the index of whichever
+        neuron in the final layer has the highest activation."""
+        test_results = [(np.argmax(self.forward_cal(x)), y)
+                        for (x, y) in test_data]
+        return sum(int(x == y) for (x, y) in test_results)
 
 
 
