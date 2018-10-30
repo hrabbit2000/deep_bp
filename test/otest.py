@@ -23,7 +23,6 @@ net.SGD(training_data, 30, 10, 3.0, test_data = test_data)
 # Epoch 29: 9477 / 10000
 
 
-
 # bp = network.Network([2, 3, 2])
 # bp.weights = [np.array([(0.1, 0.2), (0.2, 0.3), (0.3, 0.4)]), np.array([(0.5, 0.6, 0.7), (1.0, 1.0, 1.0)])]
 # bp.biases = [np.array([(0.3,), (0.4,), (0.5,)]), np.array([(0.2,), (1.0,)])]
