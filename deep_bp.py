@@ -1,98 +1,99 @@
 # -*- coding: utf-8 -*-
 
 import random
+import time
 import numpy as np
+
+def sigmoid_func(val):
+    # Logistic function
+    return 1.0 / (1.0 + np.exp(-val))
+
+def sigmoid_func_prim(val):
+    return sigmoid_func(val)*(1.0 - sigmoid_func(val))
+
+def linear_func(val):
+    return val
+
+def linear_func_prim(val):
+    return np.ones(val.shape)
 
 
 class DeepBP(object):
     # init func
-    def __init__(self, sizes, using_sigmoid = True):
+    def __init__(self, sizes, using_sigmoid=True):
         self.sizes = sizes
         self.layer_num = len(self.sizes)
         self.biases = None
         self.weights = None
         self.layers = []
+        self.actived_layers = []
         self.using_sigmoid = using_sigmoid
+        self.delta_t2 = 0.0
         self.__init_parameters()
 
-    def __sigmoid_func(self, z):
-        # Logistic function
-        return 1.0 / (1.0 + np.exp(-z))
+    def active_func(self, val):
+        if self.using_sigmoid:
+            return sigmoid_func(val)
+        return linear_func(val)
 
-    def __sigmoid_func_prim(self, z):
-        return self.__sigmoid_func(z)*(1.0 - self.__sigmoid_func(z))
-
-    def __linear_func(self, z):
-        return z
-
-    def __linear_func_prim(self, z):
-        return np.ones(z.shape)
-
-    def active_func(self, z):
-        if (self.using_sigmoid):
-            return self.__sigmoid_func(z)
-        else:
-            return self.__linear_func(z)
-
-    def active_func_prim(self, z):
-        if (self.using_sigmoid):
-            return self.__sigmoid_func_prim(z)
-        else:
-            return self.__linear_func_prim(z)
+    def active_func_prim(self, val):
+        if self.using_sigmoid:
+            return sigmoid_func_prim(val)
+        return linear_func_prim(val)
 
     def __init_parameters(self):
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         self.weights = [np.random.randn(x, y) for x, y in zip(self.sizes[0: -1], self.sizes[1:])]
 
-    def forward_cal(self, input):
-        z = input
-        self.layers.append(np.array(z))
-        for w, b in zip(self.weights, self.biases):
-            z = np.dot(np.transpose(w), z) + b
-            self.layers.append(z)
-            z = self.active_func(z)
-        #
-        return z
+    def forward_cal(self, val):
+        self.layers.append(val)
+        for weight, bias in zip(self.weights, self.biases):
+            val = np.dot(np.transpose(weight), val) + bias
+            self.layers.append(val)
+            val = self.active_func(val)
+            self.actived_layers.append(val)
+        return val
 
-    def cal_derivative(self, d):
-        grad_array = [[] for i in range(self.layer_num)]
-        derivative_weight_array = []
-        derivative_biases_array = []
-        # δ_L = -(D - f(z_L))⊙f'(z_L)
-        grad_final = np.multiply(self.active_func(self.layers[-1:][0]) - d, 
-                                 self.active_func_prim(self.layers[-1:][0]))
-        grad_array[self.layer_num - 1] = grad_final
-        # begin from (L - 1) layer
-        for n in range(self.layer_num - 2, 0, -1):
-            grad_n = np.dot(self.weights[(n - 1) + 1], grad_array[n + 1])
-            grad_n = np.multiply(grad_n, self.active_func_prim(self.layers[n]))
-            grad_array[n] = grad_n
+    def cal_derivative(self, result):
+        # prepare grad array for weigts and biases
+        grad_ws = [np.zeros(w.shape) for w in self.weights]
+        grad_bs = [np.zeros(b.shape) for b in self.biases]
         # biases derivative
-        derivative_biases_array = grad_array[1:]
+        # δ_L = -(D - f(z_L))⊙f'(z_L)
+        grad_bs[-1] = (self.actived_layers[-1] - result) * (self.active_func_prim(self.layers[-1]))
+        # begin from (L - 1) layer
+        for n in range(2, self.layer_num):
+            grad_bs[-n] = np.dot(self.weights[-n + 1], grad_bs[-n + 1])
+            grad_bs[-n] = np.multiply(grad_bs[-n], self.active_func_prim(self.layers[-n]))
         # weights derivative
-        for n in range(1, self.layer_num):
-            itemT = grad_array[n]
-            a_val = self.active_func(self.layers[n - 1])
-            if (1 == n):
+        for n in range(0, self.layer_num - 1):
+            if n != 0:
+                a_val = self.actived_layers[n - 1]
+            else:
                 a_val = self.layers[0]
-            derivative_weight_array.append(a_val * np.transpose(itemT))
-        return derivative_weight_array, derivative_biases_array
+            grad_ws[n] = a_val * np.transpose(grad_bs[n])
+        return grad_ws, grad_bs
 
     def batch_process(self, batch, eta):
+        t1 = time.time()
         aveg_weights_derivative = None
         aveg_biases_derivative = None
-        self.layers = []
         n = len(batch)
+        delta_t = 0.0
         for x, y in batch:
+            self.layers = []
+            self.actived_layers = []
+            t2 = time.time()
             self.forward_cal(x)
             weights_derivative, biases_derivative = self.cal_derivative(y)
+            delta_t += (time.time() - t2)
             # accumnulate biases
-            if None == aveg_weights_derivative:
+            if aveg_weights_derivative is None:
                 aveg_weights_derivative = np.array(weights_derivative)
             else:
                 aveg_weights_derivative += np.array(weights_derivative)
             # accumulate weights
-            if None == aveg_biases_derivative:
+            if aveg_biases_derivative is None:
                 aveg_biases_derivative = np.array(biases_derivative)
             else:
                 aveg_biases_derivative += np.array(biases_derivative)
@@ -101,11 +102,12 @@ class DeepBP(object):
         for i in range(self.layer_num - 1):
             self.weights[i] -= aveg_weights_derivative[i]
             self.biases[i] -= aveg_biases_derivative[i]
+        self.delta_t2 += delta_t
 
     def sgd(self, zip_data, epochs, mini_batch, eta, test_data=None):
         for j in range(epochs):
             random.shuffle(zip_data)
-            mini_batches = [zip_data[k : k + mini_batch] 
+            mini_batches = [zip_data[k : k + mini_batch]
                             for k in range(0, len(zip_data) - mini_batch + 1, mini_batch)]
             for mini_batche in mini_batches:
                 self.batch_process(mini_batche, eta)
@@ -124,6 +126,3 @@ class DeepBP(object):
         test_results = [(np.argmax(self.forward_cal(x)), y)
                         for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
-
-
-

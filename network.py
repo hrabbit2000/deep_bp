@@ -19,6 +19,8 @@ import random
 # Third-party libraries
 import numpy as np
 
+import time
+
 class Network(object):
 
     def __init__(self, sizes):
@@ -35,6 +37,7 @@ class Network(object):
         # 随机产生每条连接线的 weight 值（0 - 1）
         self.weights = [np.random.randn(y, x)
                         for x, y in zip(sizes[:-1], sizes[1:])]
+        self.delta_t = 0.0
 
     def feedforward(self, a):
         """
@@ -87,7 +90,9 @@ class Network(object):
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         for x, y in mini_batch:
             # 根据样本中的每一个输入 x 的其输出 y，计算 w 和 b 的偏导数
+            t = time.time()
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+            self.delta_t += (time.time() - t)
             # 累加储存偏导值 delta_nabla_b 和 delta_nabla_w
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
