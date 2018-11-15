@@ -25,8 +25,6 @@ class DeepBP(object):
         self.layer_num = len(self.sizes)
         self.biases = None
         self.weights = None
-        self.layers = []
-        self.actived_layers = []
         self.using_sigmoid = using_sigmoid
         self.delta_t2 = 0.0
         self.__init_parameters()
@@ -46,57 +44,55 @@ class DeepBP(object):
         self.weights = [np.random.randn(x, y) for x, y in zip(self.sizes[0: -1], self.sizes[1:])]
 
     def forward_cal(self, val):
-        self.layers.append(val)
         for weight, bias in zip(self.weights, self.biases):
             val = np.dot(np.transpose(weight), val) + bias
-            self.layers.append(val)
             val = self.active_func(val)
-            self.actived_layers.append(val)
         return val
 
-    def cal_derivative(self, result):
+    def cal_derivative(self, x, result):
         # prepare grad array for weigts and biases
         grad_ws = [np.zeros(w.shape) for w in self.weights]
         grad_bs = [np.zeros(b.shape) for b in self.biases]
+        # prepare all z/f(z)
+        zs = []
+        actived_zs = []
+        val = x
+        zs.append(val)
+        for weight, bias in zip(self.weights, self.biases):
+            val = np.dot(np.transpose(weight), val) + bias
+            zs.append(val)
+            val = self.active_func(val)
+            actived_zs.append(val)
         # biases derivative
         # δ_L = -(D - f(z_L))⊙f'(z_L)
-        grad_bs[-1] = (self.actived_layers[-1] - result) * (self.active_func_prim(self.layers[-1]))
+        grad_bs[-1] = (actived_zs[-1] - result) * (self.active_func_prim(zs[-1]))
         # begin from (L - 1) layer
         for n in range(2, self.layer_num):
             grad_bs[-n] = np.dot(self.weights[-n + 1], grad_bs[-n + 1])
-            grad_bs[-n] = np.multiply(grad_bs[-n], self.active_func_prim(self.layers[-n]))
+            grad_bs[-n] = np.multiply(grad_bs[-n], self.active_func_prim(zs[-n]))
         # weights derivative
         for n in range(0, self.layer_num - 1):
             if n != 0:
-                a_val = self.actived_layers[n - 1]
+                a_val = actived_zs[n - 1]
             else:
-                a_val = self.layers[0]
+                a_val = zs[0]
             grad_ws[n] = a_val * np.transpose(grad_bs[n])
         return grad_ws, grad_bs
 
     def batch_process(self, batch, eta):
         t1 = time.time()
-        aveg_weights_derivative = None
-        aveg_biases_derivative = None
+        aveg_weights_derivative = [np.zeros(w.shape) for w in self.weights]
+        aveg_biases_derivative = [np.zeros(b.shape) for b in self.biases]
         n = len(batch)
         delta_t = 0.0
         for x, y in batch:
-            self.layers = []
-            self.actived_layers = []
             t2 = time.time()
-            self.forward_cal(x)
-            weights_derivative, biases_derivative = self.cal_derivative(y)
+            weights_derivative, biases_derivative = self.cal_derivative(x, y)
             delta_t += (time.time() - t2)
             # accumnulate biases
-            if aveg_weights_derivative is None:
-                aveg_weights_derivative = np.array(weights_derivative)
-            else:
-                aveg_weights_derivative += np.array(weights_derivative)
+            aveg_biases_derivative += np.array(biases_derivative)
             # accumulate weights
-            if aveg_biases_derivative is None:
-                aveg_biases_derivative = np.array(biases_derivative)
-            else:
-                aveg_biases_derivative += np.array(biases_derivative)
+            aveg_weights_derivative += np.array(weights_derivative)
         aveg_weights_derivative *= (eta / n)
         aveg_biases_derivative *= (eta / n)
         for i in range(self.layer_num - 1):
